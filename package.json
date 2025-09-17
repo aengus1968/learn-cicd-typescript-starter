@@ -3,14 +3,15 @@
   "version": "1.0.0",
   "main": "dist/main.js",
   "type": "module",
-  "scripts": {
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
-    "build": "npx tsc",
-    "start": "node dist/main.js",
-    "dev": "npx tsc && node dist/main.js"
-  },
+"scripts": {
+"db:generate": "drizzle-kit generate",
+"db:migrate": "drizzle-kit migrate",
+"db:studio": "drizzle-kit studio",
+"build": "npx tsc",
+"start": "node dist/main.js",
+"dev": "npx tsc && node dist/main.js",
+"test": "vitest --run"
+},
   "devDependencies": {
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
