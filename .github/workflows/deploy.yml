@@ -1,15 +1,14 @@
-name: Deploy Notely to Cloud Run
+name: Build and Deploy Notely to Cloud Run
 
 on:
   push:
     branches: [ "main" ]
 
 env:
-  PROJECT_ID: <YOUR_GCP_PROJECT_ID>
+  PROJECT_ID: intense-optics-472820-m4
   REGION: us-central1
   REPO_NAME: notely-ar-repo
   IMAGE_NAME: notely
-  TAG: latest
   SERVICE_NAME: notely
 
 jobs:
@@ -20,19 +19,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # NEW: authenticate gcloud with your service account key secret
+      - name: Auth to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Set up gcloud (no key here; just the project id)
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
 
       - name: Configure Docker to use gcloud
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
 
+      - name: Build container image (tag with commit SHA)
+        run: |
+          IMAGE_URI=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+          docker build -t "$IMAGE_URI" .
+
+      - name: Push image to Artifact Registry
+        run: docker push "$IMAGE_URI"
+
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ env.TAG }} \
+            --image="$IMAGE_URI" \
             --region=${{ env.REGION }} \
             --allow-unauthenticated \
             --project=${{ env.PROJECT_ID }} \
