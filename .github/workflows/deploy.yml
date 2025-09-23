@@ -15,21 +15,18 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # NEW: authenticate gcloud with your service account key secret
-      - name: Auth to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      # Set up gcloud (no key here; just the project id)
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ env.PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
 
       - name: Configure Docker to use gcloud
         run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
@@ -39,6 +36,10 @@ jobs:
           IMAGE_URI=${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           docker build -t "$IMAGE_URI" .
+
+      - name: Run migrations
+        run: |
+          npx drizzle-kit migrate
 
       - name: Push image to Artifact Registry
         run: docker push "$IMAGE_URI"
