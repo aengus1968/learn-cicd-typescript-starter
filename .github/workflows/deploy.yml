@@ -50,6 +50,18 @@ jobs:
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           docker build -t "$IMAGE_URI" .
 
+      - name: Verify DATABASE_URL is set (masked)
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "ERROR: DATABASE_URL is not set in this job."
+            exit 1
+          fi
+          echo "DATABASE_URL length: ${#DATABASE_URL}"
+          case "$DATABASE_URL" in
+            libsql://*) echo "Scheme OK (libsql://)";;
+            *) echo "WARNING: DATABASE_URL does not start with libsql://";;
+          esac
+
       - name: Run migrations
         run: |
           npx drizzle-kit migrate
